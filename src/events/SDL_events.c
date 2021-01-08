@@ -669,7 +669,7 @@ SDL_WaitEvent(SDL_Event * event)
     /* Get events from the video subsystem */
     if (_this && _this->WaitNextEvent) {
         _this->WaitNextEvent(_this);
-        SDL_SendPendingSignalEvents();  /* in case we had a signal handler fire, etc. */
+        SDL_SendPendingQuit();  /* in case we had a signal handler fire, etc. */
     } else {
         return SDL_WaitEventTimeout(event, -1);
     }
