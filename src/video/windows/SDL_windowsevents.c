@@ -79,6 +79,8 @@
 #define WM_UNICHAR 0x0109
 #endif
 
+#define WM_SDL_WAKEUP (WM_USER + 201)
+
 static SDL_Scancode
 VKeytoScancode(WPARAM vkey)
 {
@@ -1089,6 +1091,10 @@ WIN_WindowProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
             }
         }
         break;
+
+    case WM_SDL_WAKEUP:
+        /* Used only to wakeup event loop but do not translate into an event. */
+        break;
     }
 
     /* If there's a window proc, assume it's going to handle messages */
@@ -1123,6 +1129,30 @@ void SDL_SetWindowsMessageHook(SDL_WindowsMessageHook callback, void *userdata)
 {
     g_WindowsMessageHook = callback;
     g_WindowsMessageHookData = userdata;
+}
+
+void
+WIN_WaitNextEvent(_THIS)
+{
+    MSG msg;
+    if (g_WindowsEnableMessageLoop) {
+        if (GetMessage(&msg, 0, 0, 0)) {
+            if (g_WindowsMessageHook) {
+                g_WindowsMessageHook(g_WindowsMessageHookData, msg.hwnd, msg.message, msg.wParam, msg.lParam);
+            }
+
+            /* Always translate the message in case it's a non-SDL window (e.g. with Qt integration) */
+            TranslateMessage(&msg);
+            DispatchMessage(&msg);
+        }
+    }
+}
+
+void
+WIN_SendWakeupEvent(_THIS, SDL_Window *window)
+{
+    HWND hwnd = ((SDL_WindowData *) window->driverdata)->hwnd;
+    PostMessage(hwnd, WM_SDL_WAKEUP, 0, 0);
 }
 
 void

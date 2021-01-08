@@ -286,6 +286,8 @@ struct SDL_VideoDevice
     /*
      * Event manager functions
      */
+    void (*WaitNextEvent) (_THIS);
+    void (*SendWakeupEvent) (_THIS, SDL_Window *window);
     void (*PumpEvents) (_THIS);
 
     /* Suspend the screensaver */
@@ -320,6 +322,8 @@ struct SDL_VideoDevice
     /* Data common to all drivers */
     SDL_bool is_dummy;
     SDL_bool suspend_screensaver;
+    int need_wakeup;
+    SDL_mutex *wakeup_lock; /* Initialized only if WaitNextEvent/SendWakeupEvent are supported */
     int num_displays;
     SDL_VideoDisplay *displays;
     SDL_Window *windows;
