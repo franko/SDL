@@ -286,6 +286,7 @@ struct SDL_VideoDevice
     /*
      * Event manager functions
      */
+    void (*WaitNextEvent) (_THIS);
     void (*PumpEvents) (_THIS);
 
     /* Suspend the screensaver */
