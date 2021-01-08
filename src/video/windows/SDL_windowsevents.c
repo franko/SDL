@@ -1126,6 +1126,30 @@ void SDL_SetWindowsMessageHook(SDL_WindowsMessageHook callback, void *userdata)
 }
 
 void
+WIN_WaitNextEvent(_THIS)
+{
+    MSG msg;
+    if (g_WindowsEnableMessageLoop) {
+        if (GetMessage(&msg, 0, 0, 0)) {
+            if (g_WindowsMessageHook) {
+                g_WindowsMessageHook(g_WindowsMessageHookData, msg.hwnd, msg.message, msg.wParam, msg.lParam);
+            }
+
+            /* Always translate the message in case it's a non-SDL window (e.g. with Qt integration) */
+            TranslateMessage(&msg);
+            DispatchMessage(&msg);
+        }
+    }
+}
+
+void
+WIN_SendWakeupEvent(_THIS, SDL_Window *window)
+{
+    SDL_WindowData *data = (SDL_WindowData *) window->driverdata;
+    PostMessage(data->hwnd, data->videodata->_SDL_WAKEUP, 0, 0);
+}
+
+void
 WIN_PumpEvents(_THIS)
 {
     const Uint8 *keystate;
