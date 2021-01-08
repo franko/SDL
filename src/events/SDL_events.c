@@ -665,7 +665,16 @@ SDL_PollEvent(SDL_Event * event)
 int
 SDL_WaitEvent(SDL_Event * event)
 {
-    return SDL_WaitEventTimeout(event, -1);
+    SDL_VideoDevice *_this = SDL_GetVideoDevice();
+    /* Get events from the video subsystem */
+    if (_this && _this->WaitNextEvent) {
+        _this->WaitNextEvent(_this);
+        SDL_SendPendingSignalEvents();  /* in case we had a signal handler fire, etc. */
+    } else {
+        return SDL_WaitEventTimeout(event, -1);
+    }
+
+    return 1;
 }
 
 int
