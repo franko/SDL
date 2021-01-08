@@ -230,6 +230,7 @@ X11_CreateDevice(int devindex)
     device->SetDisplayMode = X11_SetDisplayMode;
     device->SuspendScreenSaver = X11_SuspendScreenSaver;
     device->PumpEvents = X11_PumpEvents;
+    device->WaitNextEvent = X11_WaitNextEvent;
 
     device->CreateSDLWindow = X11_CreateWindow;
     device->CreateSDLWindowFrom = X11_CreateWindowFrom;
