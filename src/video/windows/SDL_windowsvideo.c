@@ -94,6 +94,7 @@ WIN_DeleteDevice(SDL_VideoDevice * device)
         SDL_UnloadObject(data->shcoreDLL);
     }
 
+    SDL_DestroyMutex(device->wakeup_lock);
     SDL_free(device->driverdata);
     SDL_free(device);
 }
@@ -119,6 +120,12 @@ WIN_CreateDevice(int devindex)
         return NULL;
     }
     device->driverdata = data;
+    device->wakeup_lock = SDL_CreateMutex();
+    if (!device->wakeup_lock) {
+        SDL_OutOfMemory();
+        SDL_free(device);
+        return (0);
+    }
 
     data->userDLL = SDL_LoadObject("USER32.DLL");
     if (data->userDLL) {
@@ -145,6 +152,8 @@ WIN_CreateDevice(int devindex)
     device->GetDisplayModes = WIN_GetDisplayModes;
     device->SetDisplayMode = WIN_SetDisplayMode;
     device->PumpEvents = WIN_PumpEvents;
+    device->WaitNextEvent = WIN_WaitNextEvent;
+    device->SendWakeupEvent = WIN_SendWakeupEvent;
     device->SuspendScreenSaver = WIN_SuspendScreenSaver;
 
     device->CreateSDLWindow = WIN_CreateWindow;
