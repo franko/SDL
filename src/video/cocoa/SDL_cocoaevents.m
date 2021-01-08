@@ -445,9 +445,8 @@ Cocoa_RegisterApp(void)
     }
 }}
 
-void
-Cocoa_PumpEvents(_THIS)
-{ @autoreleasepool
+int
+Cocoa_PumpEventsUntilDate(_THIS, NSDate *expiration, bool accumulate)
 {
 #if MAC_OS_X_VERSION_MIN_REQUIRED < 1070
     /* Update activity every 30 seconds to prevent screensaver */
@@ -463,9 +462,9 @@ Cocoa_PumpEvents(_THIS)
 #endif
 
     for ( ; ; ) {
-        NSEvent *event = [NSApp nextEventMatchingMask:NSEventMaskAny untilDate:[NSDate distantPast] inMode:NSDefaultRunLoopMode dequeue:YES ];
+        NSEvent *event = [NSApp nextEventMatchingMask:NSEventMaskAny untilDate:expiration inMode:NSDefaultRunLoopMode dequeue:YES ];
         if ( event == nil ) {
-            break;
+            return 0;
         }
 
         if (!s_bShouldHandleEventsInSDLApplication) {
@@ -474,7 +473,27 @@ Cocoa_PumpEvents(_THIS)
 
         // Pass events down to SDLApplication to be handled in sendEvent:
         [NSApp sendEvent:event];
+        if ( !accumulate) {
+            break;
+        }
     }
+    return 1;
+}
+
+void
+Cocoa_WaitNextEvent(_THIS)
+{ @autoreleasepool
+{
+    NSDate *theDistantFuture = [NSDate distantFuture];
+    while (Cocoa_PumpEventsUntilDate(_this, theDistantFuture, false) == 0) {
+    }
+}}
+
+void
+Cocoa_PumpEvents(_THIS)
+{ @autoreleasepool
+{
+    Cocoa_PumpEventsUntilDate(_this, [NSDate distantPast], true);
 }}
 
 void
