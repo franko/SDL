@@ -711,7 +711,7 @@ int
 SDL_WaitEvent(SDL_Event * event)
 {
     SDL_VideoDevice *_this = SDL_GetVideoDevice();
-    /* Get events from the video subsystem */
+    /* Use device's WaitNextEvent if available */
     if (_this && _this->WaitNextEvent) {
         _this->WaitNextEvent(_this);
         SDL_SendPendingSignalEvents();  /* in case we had a signal handler fire, etc. */

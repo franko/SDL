@@ -1435,7 +1435,6 @@ X11_Pending(Display * display)
 void
 X11_WaitNextEvent(_THIS)
 {
-    SDL_VideoData *data = (SDL_VideoData *) _this->driverdata;
     /* Keep processing pending events */
     X11_DispatchEvent(_this);
 
