@@ -707,14 +707,30 @@ SDL_PollEvent(SDL_Event * event)
     return SDL_WaitEventTimeout(event, 0);
 }
 
+static int
+SDL_WaitEvent_Device(_THIS, SDL_Event * event)
+{
+    for (;;) {
+        _this->WaitNextEvent(_this);
+        SDL_SendPendingSignalEvents();  /* in case we had a signal handler fire, etc. */
+        switch (SDL_PeepEvents(event, 1, SDL_GETEVENT, SDL_FIRSTEVENT, SDL_LASTEVENT)) {
+        case -1:
+            return 0;
+        case 0:
+            break;
+        default:
+            return 1;
+        }
+    }
+}
+
 int
 SDL_WaitEvent(SDL_Event * event)
 {
     SDL_VideoDevice *_this = SDL_GetVideoDevice();
     /* Use device's WaitNextEvent if available */
     if (_this && _this->WaitNextEvent) {
-        _this->WaitNextEvent(_this);
-        SDL_SendPendingSignalEvents();  /* in case we had a signal handler fire, etc. */
+        SDL_WaitEvent_Device(_this, event);
     } else {
         return SDL_WaitEventTimeout(event, -1);
     }
