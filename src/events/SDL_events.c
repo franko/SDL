@@ -770,6 +770,17 @@ SDL_WaitEventTimeout(SDL_Event * event, int timeout)
     }
 }
 
+static int
+SDL_SendWakeupEvent()
+{
+    SDL_VideoDevice *_this = SDL_GetVideoDevice();
+    if (_this && _this->SendWakeupEvent) {
+        _this->SendWakeupEvent(_this);
+        return 0;
+    }
+    return -1;
+}
+
 int
 SDL_PushEvent(SDL_Event * event)
 {
@@ -819,6 +830,7 @@ SDL_PushEvent(SDL_Event * event)
         return -1;
     }
 
+    SDL_SendWakeupEvent();
     SDL_GestureProcessEvent(event);
 
     return 1;

@@ -30,6 +30,7 @@ extern HINSTANCE SDL_Instance;
 extern LRESULT CALLBACK WIN_WindowProc(HWND hwnd, UINT msg, WPARAM wParam,
                                        LPARAM lParam);
 extern void WIN_PumpEvents(_THIS);
+extern void WIN_SendWakeupEvent(_THIS);
 extern void WIN_WaitNextEvent(_THIS);
 
 #endif /* SDL_windowsevents_h_ */

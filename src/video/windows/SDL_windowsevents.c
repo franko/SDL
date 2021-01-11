@@ -79,6 +79,8 @@
 #define WM_UNICHAR 0x0109
 #endif
 
+#define WM_SDL_WAKEUP (WM_USER + 201)
+
 static SDL_Scancode
 VKeytoScancode(WPARAM vkey)
 {
@@ -1089,6 +1091,10 @@ WIN_WindowProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
             }
         }
         break;
+
+    case WM_SDL_WAKEUP:
+        /* Used only to wakeup event loop but do not translate into an event. */
+        break;
     }
 
     /* If there's a window proc, assume it's going to handle messages */
@@ -1139,6 +1145,16 @@ WIN_WaitNextEvent(_THIS)
             TranslateMessage(&msg);
             DispatchMessage(&msg);
         }
+    }
+}
+
+void
+WIN_SendWakeupEvent(_THIS)
+{
+    SDL_Window *window;
+    for (window = _this->windows; window; window = window->next) {
+        HWND hwnd = ((SDL_WindowData *) window->driverdata)->hwnd;
+        PostMessage(hwnd, WM_SDL_WAKEUP, 0, 0);
     }
 }
 
