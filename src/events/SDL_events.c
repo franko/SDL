@@ -711,8 +711,6 @@ static int
 SDL_WaitEvent_Device(_THIS, SDL_Event * event)
 {
     for (;;) {
-        _this->WaitNextEvent(_this);
-        SDL_SendPendingSignalEvents();  /* in case we had a signal handler fire, etc. */
         switch (SDL_PeepEvents(event, 1, SDL_GETEVENT, SDL_FIRSTEVENT, SDL_LASTEVENT)) {
         case -1:
             return 0;
@@ -721,6 +719,9 @@ SDL_WaitEvent_Device(_THIS, SDL_Event * event)
         default:
             return 1;
         }
+        /* No events found in the queue, call WaitNextEvent to wait for an event. */
+        _this->WaitNextEvent(_this);
+        SDL_SendPendingSignalEvents();  /* in case we had a signal handler fire, etc. */
     }
 }
 
