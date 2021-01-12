@@ -1440,7 +1440,7 @@ X11_SendWakeupEvent(_THIS)
     SDL_Window *window;
     XClientMessageEvent event;
 
-    memset(&event, sizeof(XClientMessageEvent), 0);
+    memset(&event, 0, sizeof(XClientMessageEvent));
     event.type = ClientMessage;
     event.display = req_display;
     event.send_event = True;
