@@ -1433,6 +1433,31 @@ X11_Pending(Display * display)
 }
 
 void
+X11_SendWakeupEvent(_THIS)
+{
+    SDL_VideoData *data = (SDL_VideoData *) _this->driverdata;
+    Display *req_display = data->request_display;
+    SDL_Window *window;
+    XClientMessageEvent event;
+
+    memset(&event, sizeof(XClientMessageEvent), 0);
+    event.type = ClientMessage;
+    event.display = req_display;
+    event.send_event = True;
+    event.message_type = data->_SDL_WAKEUP;
+    event.format = 8;
+
+    for (window = _this->windows; window; window = window->next) {
+        Window xwindow = ((SDL_WindowData *) window->driverdata)->xwindow;
+
+        X11_XSendEvent(req_display, xwindow, False, NoEventMask, (XEvent *) &event);
+        /* XSendEvent returns a status and it could be BadValue or BadWindow. If an
+          error happens it is an SDL's internal error and there is nothing we can do here. */
+        X11_XFlush(req_display);
+    }
+}
+
+void
 X11_WaitNextEvent(_THIS)
 {
     /* Keep processing pending events */

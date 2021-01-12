@@ -193,6 +193,7 @@ X11_CreateDevice(int devindex)
        }
      */
     data->display = X11_XOpenDisplay(display);
+    data->request_display = X11_XOpenDisplay(display);
 #ifdef SDL_VIDEO_DRIVER_X11_DYNAMIC
     /* On some systems if linking without -lX11, it fails and you get following message.
      * Xlib: connection to ":0.0" refused by server
@@ -201,12 +202,19 @@ X11_CreateDevice(int devindex)
      * It succeeds if retrying 1 second later
      * or if running xhost +localhost on shell.
      */
-    if (data->display == NULL) {
+    if (data->display == NULL || data->request_display == NULL) {
         SDL_Delay(1000);
         data->display = X11_XOpenDisplay(display);
+        data->request_display = X11_XOpenDisplay(display);
     }
 #endif
-    if (data->display == NULL) {
+    if (data->display == NULL || data->request_display == NULL) {
+        if (data->display) {
+            X11_XCloseDisplay(data->display);
+        }
+        if (data->request_display) {
+            X11_XCloseDisplay(data->request_display);
+        }
         SDL_free(device->driverdata);
         SDL_free(device);
         SDL_SetError("Couldn't open X11 display");
@@ -232,6 +240,7 @@ X11_CreateDevice(int devindex)
     device->SuspendScreenSaver = X11_SuspendScreenSaver;
     device->PumpEvents = X11_PumpEvents;
     device->WaitNextEvent = X11_WaitNextEvent;
+    device->SendWakeupEvent = X11_SendWakeupEvent;
 
     device->CreateSDLWindow = X11_CreateWindow;
     device->CreateSDLWindowFrom = X11_CreateWindowFrom;
@@ -432,6 +441,7 @@ X11_VideoInit(_THIS)
     GET_ATOM(_NET_WM_USER_TIME);
     GET_ATOM(_NET_ACTIVE_WINDOW);
     GET_ATOM(_NET_FRAME_EXTENTS);
+    GET_ATOM(_SDL_WAKEUP);
     GET_ATOM(UTF8_STRING);
     GET_ATOM(PRIMARY);
     GET_ATOM(XdndEnter);
