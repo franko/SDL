@@ -9,6 +9,7 @@ LIBS	= @LIBS@
 
 TARGETS = \
 	checkkeys$(EXE) \
+	checkkeysthreads$(EXE) \
 	controllermap$(EXE) \
 	loopwave$(EXE) \
 	loopwavequeue$(EXE) \
