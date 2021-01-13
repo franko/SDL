@@ -729,8 +729,10 @@ int
 SDL_WaitEvent(SDL_Event * event)
 {
     SDL_VideoDevice *_this = SDL_GetVideoDevice();
-    /* Use device's WaitNextEvent if available */
-    if (_this && _this->WaitNextEvent) {
+    /* To use WaitNextEvent we need to ensure that also SendWakeupEvent is
+       available so that we can wake up the thread when is blocking waiting
+       for the next event. */
+    if (_this && _this->WaitNextEvent && _this->SendWakeupEvent) {
         SDL_WaitEvent_Device(_this, event);
     } else {
         return SDL_WaitEventTimeout(event, -1);
