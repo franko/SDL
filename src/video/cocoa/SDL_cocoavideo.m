@@ -81,6 +81,7 @@ Cocoa_CreateDevice(int devindex)
     device->SetDisplayMode = Cocoa_SetDisplayMode;
     device->PumpEvents = Cocoa_PumpEvents;
     device->WaitNextEvent = Cocoa_WaitNextEvent;
+    device->SendWakeupEvent = Cocoa_SendWakeupEvent;
     device->SuspendScreenSaver = Cocoa_SuspendScreenSaver;
 
     device->CreateSDLWindow = Cocoa_CreateWindow;

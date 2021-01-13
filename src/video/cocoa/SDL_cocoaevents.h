@@ -26,6 +26,7 @@
 extern void Cocoa_RegisterApp(void);
 extern void Cocoa_PumpEvents(_THIS);
 extern void Cocoa_WaitNextEvent(_THIS);
+extern void Cocoa_SendWakeupEvent(_THIS);
 extern void Cocoa_SuspendScreenSaver(_THIS);
 
 #endif /* SDL_cocoaevents_h_ */
