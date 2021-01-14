@@ -1149,13 +1149,10 @@ WIN_WaitNextEvent(_THIS)
 }
 
 void
-WIN_SendWakeupEvent(_THIS)
+WIN_SendWakeupEvent(_THIS, SDL_Window *window)
 {
-    SDL_Window *window;
-    for (window = _this->windows; window; window = window->next) {
-        HWND hwnd = ((SDL_WindowData *) window->driverdata)->hwnd;
-        PostMessage(hwnd, WM_SDL_WAKEUP, 0, 0);
-    }
+    HWND hwnd = ((SDL_WindowData *) window->driverdata)->hwnd;
+    PostMessage(hwnd, WM_SDL_WAKEUP, 0, 0);
 }
 
 void
