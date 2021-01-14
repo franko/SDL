@@ -1437,7 +1437,7 @@ X11_SendWakeupEvent(_THIS, SDL_Window *window)
 {
     SDL_VideoData *data = (SDL_VideoData *) _this->driverdata;
     Display *req_display = data->request_display;
-    Window xwindow;
+    Window xwindow = ((SDL_WindowData *) window->driverdata)->xwindow;
     XClientMessageEvent event;
 
     memset(&event, 0, sizeof(XClientMessageEvent));
@@ -1446,8 +1446,6 @@ X11_SendWakeupEvent(_THIS, SDL_Window *window)
     event.send_event = True;
     event.message_type = data->_SDL_WAKEUP;
     event.format = 8;
-
-    Window xwindow = ((SDL_WindowData *) window->driverdata)->xwindow;
 
     X11_XSendEvent(req_display, xwindow, False, NoEventMask, (XEvent *) &event);
     /* XSendEvent returns a status and it could be BadValue or BadWindow. If an
