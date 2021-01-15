@@ -786,13 +786,8 @@ SDL_SendWakeupEvent()
     SDL_Window *window;
     if (_this && _this->SendWakeupEvent) {
         for (window = _this->windows; window; window = window->next) {
-            // FIXME: initialize wakeup_lock and need_wakeup for X11 and OSX video devices,
-            // {WIN,Cocoa}_CreateDevice function.
             if (!_this->wakeup_lock || SDL_LockMutex(_this->wakeup_lock) == 0) {
                 if (_this->need_wakeup) {
-                    // CHANGE SIGNATURE of SendWakeupEvent (for X11 and OSX)
-                    // Remove window loop in device's SendWakeupEvent for X11 and OSX
-                    fprintf(stderr, "SDL_SendWakeupEvent: sending wakeup event\n"); fflush(stderr);
                     _this->SendWakeupEvent(_this, window);
                 }
                 if (_this->wakeup_lock) {

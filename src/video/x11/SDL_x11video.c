@@ -117,6 +117,7 @@ X11_DeleteDevice(SDL_VideoDevice * device)
         X11_XCloseDisplay(data->display);
     }
     SDL_free(data->windowlist);
+    SDL_DestroyMutex(device->wakeup_lock);
     SDL_free(device->driverdata);
     SDL_free(device);
 
@@ -181,6 +182,12 @@ X11_CreateDevice(int devindex)
         return NULL;
     }
     device->driverdata = data;
+    device->wakeup_lock = SDL_CreateMutex();
+    if (!device->wakeup_lock) {
+        SDL_free(device);
+        SDL_OutOfMemory();
+        return (0);
+    }
 
     data->global_mouse_changed = SDL_TRUE;
 

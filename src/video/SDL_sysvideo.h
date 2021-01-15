@@ -323,7 +323,7 @@ struct SDL_VideoDevice
     SDL_bool is_dummy;
     SDL_bool suspend_screensaver;
     int need_wakeup;
-    SDL_mutex *wakeup_lock;
+    SDL_mutex *wakeup_lock; /* Initialized only if WaitNextEvent/SendWakeupEvent are supported */
     int num_displays;
     SDL_VideoDisplay *displays;
     SDL_Window *windows;

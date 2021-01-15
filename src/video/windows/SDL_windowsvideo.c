@@ -120,7 +120,6 @@ WIN_CreateDevice(int devindex)
         return NULL;
     }
     device->driverdata = data;
-    device->need_wakeup = 0;
     device->wakeup_lock = SDL_CreateMutex();
     if (!device->wakeup_lock) {
         SDL_OutOfMemory();

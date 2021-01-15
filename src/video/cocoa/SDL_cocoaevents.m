@@ -496,25 +496,22 @@ Cocoa_PumpEvents(_THIS)
     Cocoa_PumpEventsUntilDate(_this, [NSDate distantPast], true);
 }}
 
-void Cocoa_SendWakeupEvent(_THIS)
+void Cocoa_SendWakeupEvent(_THIS, SDL_Window *window)
 { @autoreleasepool
 {
-    SDL_Window *window;
-    for (window = _this->windows; window; window = window->next) {
-        NSWindow *nswindow = ((SDL_WindowData *) window->driverdata)->nswindow;
+    NSWindow *nswindow = ((SDL_WindowData *) window->driverdata)->nswindow;
 
-        NSEvent* event = [NSEvent otherEventWithType: NSApplicationDefined
-                                        location: NSMakePoint(0,0)
-                                   modifierFlags: 0
-                                       timestamp: 0.0
-                                    windowNumber: [nswindow getWindowNumber]
-                                         context: nil
-                                         subtype: 0
-                                           data1: 0
-                                           data2: 0];
+    NSEvent* event = [NSEvent otherEventWithType: NSApplicationDefined
+                                    location: NSMakePoint(0,0)
+                               modifierFlags: 0
+                                   timestamp: 0.0
+                                windowNumber: [nswindow getWindowNumber]
+                                     context: nil
+                                     subtype: 0
+                                       data1: 0
+                                       data2: 0];
 
-        [NSApp postEvent: event atStart: YES];
-    }
+    [NSApp postEvent: event atStart: YES];
 }}
 
 void

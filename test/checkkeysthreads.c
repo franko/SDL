@@ -209,7 +209,7 @@ static int ping_thread(void *ptr)
     SDL_Event sdlevent;
     memset(&sdlevent, sizeof(SDL_Event), 0);
     for (cnt = 0; cnt < 10; ++cnt) {
-        fprintf(stderr, "sending event from thread.\n"); fflush(stderr);
+        fprintf(stderr, "sending event (%d/%d) from thread.\n", cnt + 1, 10); fflush(stderr);
         sdlevent.type = SDL_KEYDOWN;
         sdlevent.key.keysym.sym = SDLK_1;
         SDL_PushEvent(&sdlevent);

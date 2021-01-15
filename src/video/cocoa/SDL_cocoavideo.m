@@ -45,6 +45,7 @@ Cocoa_Available(void)
 static void
 Cocoa_DeleteDevice(SDL_VideoDevice * device)
 {
+    SDL_DestroyMutex(device->wakeup_lock);
     SDL_free(device->driverdata);
     SDL_free(device);
 }
@@ -70,6 +71,12 @@ Cocoa_CreateDevice(int devindex)
         return NULL;
     }
     device->driverdata = data;
+    device->wakeup_lock = SDL_CreateMutex();
+    if (!device->wakeup_lock) {
+        SDL_OutOfMemory();
+        SDL_free(device);
+        return (0);
+    }
 
     /* Set the function pointers */
     device->VideoInit = Cocoa_VideoInit;
