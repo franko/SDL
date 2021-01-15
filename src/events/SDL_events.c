@@ -736,10 +736,23 @@ int
 SDL_WaitEvent(SDL_Event * event)
 {
     SDL_VideoDevice *_this = SDL_GetVideoDevice();
+    SDL_bool need_polling = SDL_FALSE;
+
+#if !SDL_JOYSTICK_DISABLED
+    need_polling = \
+        (!SDL_disabled_events[SDL_JOYAXISMOTION >> 8] || SDL_JoystickEventState(SDL_QUERY)) \
+        && (SDL_NumJoysticks() > 0);
+#endif
+
+#if !SDL_SENSOR_DISABLED
+    need_polling = need_polling || (!SDL_disabled_events[SDL_SENSORUPDATE >> 8] && \
+        (SDL_NumSensors() > 0));
+#endif
+
     /* To use WaitNextEvent we need to ensure that also SendWakeupEvent is
        available so that we can wake up the thread when is blocking waiting
        for the next event. */
-    if (_this && _this->WaitNextEvent && _this->SendWakeupEvent) {
+    if (!need_polling && _this && _this->WaitNextEvent && _this->SendWakeupEvent) {
         SDL_WaitEvent_Device(_this, event);
     } else {
         return SDL_WaitEventTimeout(event, -1);
