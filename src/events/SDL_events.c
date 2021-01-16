@@ -765,12 +765,9 @@ SDL_WaitEvent(SDL_Event * event)
        available so that we can wake up the thread when is blocking waiting
        for the next event. */
     if (!need_polling && _this && _this->WaitNextEvent && _this->SendWakeupEvent) {
-        SDL_WaitEvent_Device(_this, event);
-    } else {
-        return SDL_WaitEventTimeout(event, -1);
+        return SDL_WaitEvent_Device(_this, event);
     }
-
-    return 1;
+    return SDL_WaitEventTimeout(event, -1);
 }
 
 int
