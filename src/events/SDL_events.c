@@ -708,17 +708,17 @@ SDL_PollEvent(SDL_Event * event)
 }
 
 static int
-SDL_WaitEvent_Device(_THIS, SDL_Event * event)
+SDL_WaitEvent_Device(_THIS, SDL_Window *wakeup_window, SDL_Event * event)
 {
     for (;;) {
         if (!_this->wakeup_lock || SDL_LockMutex(_this->wakeup_lock) == 0) {
             int status = SDL_PeepEvents(event, 1, SDL_GETEVENT, SDL_FIRSTEVENT, SDL_LASTEVENT);
             /* If status == 0 we are going to block so wakeup will be needed. */
             if (status == 0) {
-                _this->need_wakeup = SDL_TRUE;
+                _this->wakeup_window = wakeup_window;
                 _this->blocking_thread_id = SDL_ThreadID();
             } else {
-                _this->need_wakeup = SDL_FALSE;
+                _this->wakeup_window = NULL;
                 _this->blocking_thread_id = 0;
             }
             if (_this->wakeup_lock) {
@@ -733,8 +733,8 @@ SDL_WaitEvent_Device(_THIS, SDL_Event * event)
             }
             /* No events found in the queue, call WaitNextEvent to wait for an event. */
             _this->WaitNextEvent(_this);
-            /* Set need_wakeup without holding the lock, should be fine but to be verified. */
-            _this->need_wakeup = SDL_FALSE;
+            /* Set wakeup_window to NULL without holding the lock. */
+            _this->wakeup_window = NULL;
         }
     }
     return 0;
@@ -744,9 +744,8 @@ int
 SDL_WaitEvent(SDL_Event * event)
 {
     SDL_VideoDevice *_this = SDL_GetVideoDevice();
-    SDL_bool need_polling = SDL_FALSE;
-    SDL_bool has_window;
-    SDL_Window *window;
+    SDL_bool need_polling;
+    SDL_Window *wakeup_window = NULL;
 
 #if !SDL_JOYSTICK_DISABLED
     need_polling = \
@@ -759,19 +758,22 @@ SDL_WaitEvent(SDL_Event * event)
         (SDL_NumSensors() > 0));
 #endif
 
-    has_window = SDL_FALSE;
-    for (window = _this->windows; window; window = window->next) {
-        if (window->flags & SDL_WINDOW_SHOWN) {
-            has_window = SDL_TRUE;
+    if (!need_polling && _this) {
+        /* Look if a shown window is available to send the wakeup event. */
+        SDL_Window *window;
+        for (window = _this->windows; window; window = window->next) {
+            if (window->flags & SDL_WINDOW_SHOWN) {
+                wakeup_window = window;
+            }
         }
+        need_polling = (wakeup_window == NULL);
     }
-    need_polling = need_polling || !has_window;
 
     /* To use WaitNextEvent we need to ensure that also SendWakeupEvent is
        available so that we can wake up the thread when is blocking waiting
        for the next event. */
     if (!need_polling && _this && _this->WaitNextEvent && _this->SendWakeupEvent) {
-        return SDL_WaitEvent_Device(_this, event);
+        return SDL_WaitEvent_Device(_this, wakeup_window, event);
     }
     return SDL_WaitEventTimeout(event, -1);
 }
@@ -811,15 +813,12 @@ static int
 SDL_SendWakeupEvent()
 {
     SDL_VideoDevice *_this = SDL_GetVideoDevice();
-    SDL_Window *window;
-    if (_this && ( !_this->wakeup_lock || SDL_LockMutex(_this->wakeup_lock) == 0) ) {
-        if (_this->need_wakeup && \
-            _this->blocking_thread_id != 0 && _this->blocking_thread_id != SDL_ThreadID() && \
-            _this->SendWakeupEvent)
-        {
-            for (window = _this->windows; window; window = window->next) {
-                _this->SendWakeupEvent(_this, window);
-            }
+    if (!_this || !_this->SendWakeupEvent) {
+        return 0;
+    }
+    if (!_this->wakeup_lock || SDL_LockMutex(_this->wakeup_lock) == 0) {
+        if (_this->wakeup_window && _this->blocking_thread_id != 0 && _this->blocking_thread_id != SDL_ThreadID()) {
+            _this->SendWakeupEvent(_this, _this->wakeup_window);
         }
         if (_this->wakeup_lock) {
             SDL_UnlockMutex(_this->wakeup_lock);
