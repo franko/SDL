@@ -714,21 +714,27 @@ SDL_WaitEvent_Device(_THIS, SDL_Event * event)
         if (!_this->wakeup_lock || SDL_LockMutex(_this->wakeup_lock) == 0) {
             int status = SDL_PeepEvents(event, 1, SDL_GETEVENT, SDL_FIRSTEVENT, SDL_LASTEVENT);
             /* If status == 0 we are going to block so wakeup will be needed. */
-            _this->need_wakeup = (status == 0 ? 1 : 0);
-            _this->main_thread_id = SDL_ThreadID();
+            if (status == 0) {
+                _this->need_wakeup = SDL_TRUE;
+                _this->blocking_thread_id = SDL_ThreadID();
+            } else {
+                _this->need_wakeup = SDL_FALSE;
+                _this->blocking_thread_id = 0;
+            }
             if (_this->wakeup_lock) {
                 SDL_UnlockMutex(_this->wakeup_lock);
             }
-            if (status == -1) {
+            if (status < 0) {
                 break;
-            } else if (status != 0) {
+            }
+            if (status > 0) {
                 SDL_SendPendingSignalEvents();  /* in case we had a signal handler fire, etc. */
                 return 1;
             }
             /* No events found in the queue, call WaitNextEvent to wait for an event. */
             _this->WaitNextEvent(_this);
             /* Set need_wakeup without holding the lock, should be fine but to be verified. */
-            _this->need_wakeup = 0;
+            _this->need_wakeup = SDL_FALSE;
         }
     }
     return 0;
@@ -806,23 +812,20 @@ SDL_SendWakeupEvent()
 {
     SDL_VideoDevice *_this = SDL_GetVideoDevice();
     SDL_Window *window;
-    if (_this->main_thread_id == 0 || _this->main_thread_id == SDL_ThreadID()) {
-        return 0;
-    }
-    if (_this && _this->SendWakeupEvent) {
-        for (window = _this->windows; window; window = window->next) {
-            if (!_this->wakeup_lock || SDL_LockMutex(_this->wakeup_lock) == 0) {
-                if (_this->need_wakeup) {
-                    _this->SendWakeupEvent(_this, window);
-                }
-                if (_this->wakeup_lock) {
-                    SDL_UnlockMutex(_this->wakeup_lock);
-                }
+    if (_this && ( !_this->wakeup_lock || SDL_LockMutex(_this->wakeup_lock) == 0) ) {
+        if (_this->need_wakeup && \
+            _this->blocking_thread_id != 0 && _this->blocking_thread_id != SDL_ThreadID() && \
+            _this->SendWakeupEvent)
+        {
+            for (window = _this->windows; window; window = window->next) {
+                _this->SendWakeupEvent(_this, window);
             }
         }
-        return 0;
+        if (_this->wakeup_lock) {
+            SDL_UnlockMutex(_this->wakeup_lock);
+        }
     }
-    return -1;
+    return 0;
 }
 
 int
