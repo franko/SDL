@@ -93,8 +93,9 @@ WIN_DeleteDevice(SDL_VideoDevice * device)
     if (data->shcoreDLL) {
         SDL_UnloadObject(data->shcoreDLL);
     }
-
-    SDL_DestroyMutex(device->wakeup_lock);
+    if (device->wakeup_lock) {
+        SDL_DestroyMutex(device->wakeup_lock);
+    }
     SDL_free(device->driverdata);
     SDL_free(device);
 }
@@ -121,11 +122,6 @@ WIN_CreateDevice(int devindex)
     }
     device->driverdata = data;
     device->wakeup_lock = SDL_CreateMutex();
-    if (!device->wakeup_lock) {
-        SDL_OutOfMemory();
-        SDL_free(device);
-        return (0);
-    }
 
     data->userDLL = SDL_LoadObject("USER32.DLL");
     if (data->userDLL) {
