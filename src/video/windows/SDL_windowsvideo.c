@@ -235,6 +235,8 @@ VideoBootStrap WINDOWS_bootstrap = {
 int
 WIN_VideoInit(_THIS)
 {
+    SDL_VideoData *data = (SDL_VideoData *) _this->driverdata;
+
     if (WIN_InitModes(_this) < 0) {
         return -1;
     }
@@ -244,6 +246,8 @@ WIN_VideoInit(_THIS)
 
     SDL_AddHintCallback(SDL_HINT_WINDOWS_ENABLE_MESSAGELOOP, UpdateWindowsEnableMessageLoop, NULL);
     SDL_AddHintCallback(SDL_HINT_WINDOW_FRAME_USABLE_WHILE_CURSOR_HIDDEN, UpdateWindowFrameUsableWhileCursorHidden, NULL);
+
+    data->_SDL_WAKEUP = RegisterWindowMessage("_SDL_WAKEUP");
 
     return 0;
 }
