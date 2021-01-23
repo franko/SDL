@@ -762,7 +762,7 @@ SDL_WaitEvent(SDL_Event * event)
         /* Look if a shown window is available to send the wakeup event. */
         SDL_Window *window;
         for (window = _this->windows; window; window = window->next) {
-            if (window->flags & SDL_WINDOW_SHOWN) {
+            if (!window->is_destroying) {
                 wakeup_window = window;
             }
         }
