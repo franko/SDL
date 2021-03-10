@@ -1467,6 +1467,44 @@ X11_WaitNextEvent(_THIS)
 }
 
 void
+X11_WaitNextEventTimeout(_THIS, int timeout)
+{
+    SDL_VideoData *videodata = (SDL_VideoData *) _this->driverdata;
+    Display *display;
+    XEvent xevent;
+    int display_fd;
+    fd_set readset;
+    struct timeval tv_timeout;
+
+    if (!videodata) {
+        return;
+    }
+    display = videodata->display;
+
+    SDL_zero(xevent);           /* valgrind fix. --ryan. */
+
+    display_fd = ConnectionNumber(display);
+    FD_ZERO(&readset);
+    FD_SET(display_fd, &readset);
+    tv_timeout.tv_sec = (timeout / 1000);
+    tv_timeout.tv_usec = (timeout % 1000);
+    if (select(fd + 1, &readset, NULL, NULL, &tv_timeout) > 0) {
+        X11_XNextEvent(display, xevent);
+        return True;
+    } else {
+            return False;
+        }
+
+    // X11_DispatchEvent(_this);
+
+#ifdef SDL_USE_IME
+    if(SDL_GetEventState(SDL_TEXTINPUT) == SDL_ENABLE){
+        SDL_IME_PumpEvents();
+    }
+#endif
+}
+
+void
 X11_PumpEvents(_THIS)
 {
     SDL_VideoData *data = (SDL_VideoData *) _this->driverdata;

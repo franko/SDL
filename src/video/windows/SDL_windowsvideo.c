@@ -149,6 +149,7 @@ WIN_CreateDevice(int devindex)
     device->SetDisplayMode = WIN_SetDisplayMode;
     device->PumpEvents = WIN_PumpEvents;
     device->WaitNextEvent = WIN_WaitNextEvent;
+    device->WaitNextEventTimeout = WIN_WaitNextEventTimeout;
     device->SendWakeupEvent = WIN_SendWakeupEvent;
     device->SuspendScreenSaver = WIN_SuspendScreenSaver;
 

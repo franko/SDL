@@ -1142,6 +1142,26 @@ WIN_WaitNextEvent(_THIS)
     }
 }
 
+// FIXME: the method above is almost identical to WIN_WaitNextEvent
+int
+WIN_WaitNextEventTimeout(_THIS, int timeout)
+{
+    MSG msg;
+    if (g_WindowsEnableMessageLoop) {
+        UINT_PTR timer_id = SetTimer(NULL, NULL, timeout, NULL);
+        BOOL message_result = GetMessage(&msg, 0, 0, 0);
+        KillTimer(NULL, timer_id);
+        if (message_result) {
+            if (g_WindowsMessageHook) {
+                g_WindowsMessageHook(g_WindowsMessageHookData, msg.hwnd, msg.message, msg.wParam, msg.lParam);
+            }
+            /* Always translate the message in case it's a non-SDL window (e.g. with Qt integration) */
+            TranslateMessage(&msg);
+            DispatchMessage(&msg);
+        }
+    }
+}
+
 void
 WIN_SendWakeupEvent(_THIS, SDL_Window *window)
 {
