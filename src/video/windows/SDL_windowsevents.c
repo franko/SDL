@@ -1152,6 +1152,9 @@ WIN_WaitNextEventTimeout(_THIS, int timeout)
         BOOL message_result = GetMessage(&msg, 0, 0, 0);
         KillTimer(NULL, timer_id);
         if (message_result) {
+            if (msg.message == WM_TIMER && msg.hwnd == NULL && msg.wParam == timer_id) {
+                return 0;
+            }
             if (g_WindowsMessageHook) {
                 g_WindowsMessageHook(g_WindowsMessageHookData, msg.hwnd, msg.message, msg.wParam, msg.lParam);
             }
@@ -1160,6 +1163,7 @@ WIN_WaitNextEventTimeout(_THIS, int timeout)
             DispatchMessage(&msg);
         }
     }
+    return 1;
 }
 
 void

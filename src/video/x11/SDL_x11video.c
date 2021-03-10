@@ -244,6 +244,7 @@ X11_CreateDevice(int devindex)
     device->SuspendScreenSaver = X11_SuspendScreenSaver;
     device->PumpEvents = X11_PumpEvents;
     device->WaitNextEvent = X11_WaitNextEvent;
+    device->WaitNextEventTimeout = X11_WaitNextEventTimeout;
     device->SendWakeupEvent = X11_SendWakeupEvent;
 
     device->CreateSDLWindow = X11_CreateWindow;

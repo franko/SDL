@@ -644,12 +644,12 @@ X11_HandleClipboardEvent(_THIS, const XEvent *xevent)
 
 
 static void
-X11_DispatchEvent(_THIS)
+X11_DispatchEvent(_THIS, XEvent *xevent_ptr)
 {
     SDL_VideoData *videodata = (SDL_VideoData *) _this->driverdata;
     Display *display;
+    XEvent xevent = *xevent_ptr;
     SDL_WindowData *data;
-    XEvent xevent;
     int orig_event_type;
     KeyCode orig_keycode;
     XClientMessageEvent m;
@@ -659,9 +659,6 @@ X11_DispatchEvent(_THIS)
         return;
     }
     display = videodata->display;
-
-    SDL_zero(xevent);           /* valgrind fix. --ryan. */
-    X11_XNextEvent(display, &xevent);
 
     /* Save the original keycode for dead keys, which are filtered out by
        the XFilterEvent() call below.
@@ -1456,8 +1453,20 @@ X11_SendWakeupEvent(_THIS, SDL_Window *window)
 void
 X11_WaitNextEvent(_THIS)
 {
+    SDL_VideoData *videodata = (SDL_VideoData *) _this->driverdata;
+    Display *display;
+    XEvent xevent;
+
+    if (!videodata) {
+        return;
+    }
+    display = videodata->display;
+
+    SDL_zero(xevent);
+    X11_XNextEvent(display, &xevent);
+
     /* Keep processing pending events */
-    X11_DispatchEvent(_this);
+    X11_DispatchEvent(_this, &xevent);
 
 #ifdef SDL_USE_IME
     if(SDL_GetEventState(SDL_TEXTINPUT) == SDL_ENABLE){
@@ -1466,7 +1475,7 @@ X11_WaitNextEvent(_THIS)
 #endif
 }
 
-void
+int
 X11_WaitNextEventTimeout(_THIS, int timeout)
 {
     SDL_VideoData *videodata = (SDL_VideoData *) _this->driverdata;
@@ -1477,7 +1486,7 @@ X11_WaitNextEventTimeout(_THIS, int timeout)
     struct timeval tv_timeout;
 
     if (!videodata) {
-        return;
+        return -1;
     }
     display = videodata->display;
 
@@ -1488,26 +1497,27 @@ X11_WaitNextEventTimeout(_THIS, int timeout)
     FD_SET(display_fd, &readset);
     tv_timeout.tv_sec = (timeout / 1000);
     tv_timeout.tv_usec = (timeout % 1000);
-    if (select(fd + 1, &readset, NULL, NULL, &tv_timeout) > 0) {
-        X11_XNextEvent(display, xevent);
-        return True;
+    if (select(display_fd + 1, &readset, NULL, NULL, &tv_timeout) > 0) {
+        X11_XNextEvent(display, &xevent);
     } else {
-            return False;
-        }
+        return 0;
+    }
 
-    // X11_DispatchEvent(_this);
+    X11_DispatchEvent(_this, &xevent);
 
 #ifdef SDL_USE_IME
     if(SDL_GetEventState(SDL_TEXTINPUT) == SDL_ENABLE){
         SDL_IME_PumpEvents();
     }
 #endif
+    return 1;
 }
 
 void
 X11_PumpEvents(_THIS)
 {
     SDL_VideoData *data = (SDL_VideoData *) _this->driverdata;
+    XEvent xevent;
 
     if (data->last_mode_change_deadline) {
         if (SDL_TICKS_PASSED(SDL_GetTicks(), data->last_mode_change_deadline)) {
@@ -1530,9 +1540,12 @@ X11_PumpEvents(_THIS)
         }
     }
 
+    SDL_zero(xevent);
+
     /* Keep processing pending events */
     while (X11_Pending(data->display)) {
-        X11_DispatchEvent(_this);
+        X11_XNextEvent(data->display, &xevent);
+        X11_DispatchEvent(_this, &xevent);
     }
 
 #ifdef SDL_USE_IME
