@@ -1148,9 +1148,18 @@ WIN_WaitNextEventTimeout(_THIS, int timeout)
 {
     MSG msg;
     if (g_WindowsEnableMessageLoop) {
-        UINT_PTR timer_id = SetTimer(NULL, NULL, timeout, NULL);
-        BOOL message_result = GetMessage(&msg, 0, 0, 0);
-        KillTimer(NULL, timer_id);
+        BOOL message_result;
+        UINT_PTR timer_id = 0;
+        if (timeout > 0) {
+            // FIXME: warning about 2nd argument of SetTimer
+            timer_id = SetTimer(NULL, NULL, timeout, NULL);
+            message_result = GetMessage(&msg, 0, 0, 0);
+            KillTimer(NULL, timer_id);
+        } else if (timeout == 0) {
+            message_result = PeekMessage(&msg, NULL, 0, 0, PM_REMOVE);
+        } else {
+            message_result = GetMessage(&msg, 0, 0, 0);
+        }
         if (message_result) {
             if (msg.message == WM_TIMER && msg.hwnd == NULL && msg.wParam == timer_id) {
                 return 0;
@@ -1161,9 +1170,10 @@ WIN_WaitNextEventTimeout(_THIS, int timeout)
             /* Always translate the message in case it's a non-SDL window (e.g. with Qt integration) */
             TranslateMessage(&msg);
             DispatchMessage(&msg);
+            return 1;
         }
     }
-    return 1;
+    return 0;
 }
 
 void

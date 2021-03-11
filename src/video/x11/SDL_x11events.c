@@ -655,9 +655,7 @@ X11_DispatchEvent(_THIS, XEvent *xevent_ptr)
     XClientMessageEvent m;
     int i;
 
-    if (!videodata) {
-        return;
-    }
+    SDL_assert(videodata != NULL);
     display = videodata->display;
 
     /* Save the original keycode for dead keys, which are filtered out by
@@ -1486,21 +1484,32 @@ X11_WaitNextEventTimeout(_THIS, int timeout)
     struct timeval tv_timeout;
 
     if (!videodata) {
-        return -1;
+        return 0;
     }
     display = videodata->display;
 
-    SDL_zero(xevent);           /* valgrind fix. --ryan. */
+    SDL_zero(xevent);
 
-    display_fd = ConnectionNumber(display);
-    FD_ZERO(&readset);
-    FD_SET(display_fd, &readset);
-    tv_timeout.tv_sec = (timeout / 1000);
-    tv_timeout.tv_usec = (timeout % 1000);
-    if (select(display_fd + 1, &readset, NULL, NULL, &tv_timeout) > 0) {
-        X11_XNextEvent(display, &xevent);
+    if (timeout == 0) {
+        // FIXME: do we need to loop while there are pending events ?
+        if (X11_Pending(display)) {
+            X11_XNextEvent(display, &xevent);
+        } else {
+            return 0;
+        }
+    } else if (timeout > 0) {
+        display_fd = ConnectionNumber(display);
+        FD_ZERO(&readset);
+        FD_SET(display_fd, &readset);
+        tv_timeout.tv_sec = (timeout / 1000);
+        tv_timeout.tv_usec = (timeout % 1000);
+        if (select(display_fd + 1, &readset, NULL, NULL, &tv_timeout) > 0) {
+            X11_XNextEvent(display, &xevent);
+        } else {
+            return 0;
+        }
     } else {
-        return 0;
+        X11_XNextEvent(display, &xevent);
     }
 
     X11_DispatchEvent(_this, &xevent);
