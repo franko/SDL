@@ -1125,26 +1125,8 @@ void SDL_SetWindowsMessageHook(SDL_WindowsMessageHook callback, void *userdata)
     g_WindowsMessageHookData = userdata;
 }
 
-void
-WIN_WaitNextEvent(_THIS)
-{
-    MSG msg;
-    if (g_WindowsEnableMessageLoop) {
-        if (GetMessage(&msg, 0, 0, 0)) {
-            if (g_WindowsMessageHook) {
-                g_WindowsMessageHook(g_WindowsMessageHookData, msg.hwnd, msg.message, msg.wParam, msg.lParam);
-            }
-
-            /* Always translate the message in case it's a non-SDL window (e.g. with Qt integration) */
-            TranslateMessage(&msg);
-            DispatchMessage(&msg);
-        }
-    }
-}
-
-// FIXME: the method above is almost identical to WIN_WaitNextEvent
 int
-WIN_WaitNextEventTimeout(_THIS, int timeout)
+WIN_WaitEventTimeout(_THIS, int timeout)
 {
     MSG msg;
     if (g_WindowsEnableMessageLoop) {

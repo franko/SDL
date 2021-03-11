@@ -708,39 +708,6 @@ SDL_PollEvent(SDL_Event * event)
 }
 
 static int
-SDL_WaitEvent_Device(_THIS, SDL_Window *wakeup_window, SDL_Event * event)
-{
-    for (;;) {
-        if (!_this->wakeup_lock || SDL_LockMutex(_this->wakeup_lock) == 0) {
-            int status = SDL_PeepEvents(event, 1, SDL_GETEVENT, SDL_FIRSTEVENT, SDL_LASTEVENT);
-            /* If status == 0 we are going to block so wakeup will be needed. */
-            if (status == 0) {
-                _this->wakeup_window = wakeup_window;
-                _this->blocking_thread_id = SDL_ThreadID();
-            } else {
-                _this->wakeup_window = NULL;
-                _this->blocking_thread_id = 0;
-            }
-            if (_this->wakeup_lock) {
-                SDL_UnlockMutex(_this->wakeup_lock);
-            }
-            if (status < 0) {
-                break;
-            }
-            if (status > 0) {
-                SDL_SendPendingSignalEvents();  /* in case we had a signal handler fire, etc. */
-                return 1;
-            }
-            /* No events found in the queue, call WaitNextEvent to wait for an event. */
-            _this->WaitNextEvent(_this);
-            /* Set wakeup_window to NULL without holding the lock. */
-            _this->wakeup_window = NULL;
-        }
-    }
-    return 0;
-}
-
-static int
 SDL_WaitEventTimeout_Device(_THIS, SDL_Window *wakeup_window, SDL_Event * event, int timeout)
 {
     for (;;) {
@@ -760,8 +727,8 @@ SDL_WaitEventTimeout_Device(_THIS, SDL_Window *wakeup_window, SDL_Event * event,
             if (status < 0) {
                 break;
             }
-            /* No events found in the queue, call WaitNextEvent to wait for an event. */
-            status = _this->WaitNextEventTimeout(_this, timeout);
+            /* No events found in the queue, call WaitEventTimeout to wait for an event. */
+            status = _this->WaitEventTimeout(_this, timeout);
             /* Set wakeup_window to NULL without holding the lock. */
             _this->wakeup_window = NULL;
             return status;
@@ -803,22 +770,6 @@ SDL_find_active_window(SDL_VideoDevice * _this)
 int
 SDL_WaitEvent(SDL_Event * event)
 {
-    SDL_VideoDevice *_this = SDL_GetVideoDevice();
-    SDL_bool need_polling = SDL_events_need_polling();
-    SDL_Window *wakeup_window = NULL;
-
-    if (!need_polling && _this) {
-        /* Look if a shown window is available to send the wakeup event. */
-        wakeup_window = SDL_find_active_window(_this);
-        need_polling = (wakeup_window == NULL);
-    }
-
-    /* To use WaitNextEvent we need to ensure that also SendWakeupEvent is
-       available so that we can wake up the thread when is blocking waiting
-       for the next event. */
-    if (!need_polling && _this && _this->WaitNextEvent && _this->SendWakeupEvent) {
-        return SDL_WaitEvent_Device(_this, wakeup_window, event);
-    }
     return SDL_WaitEventTimeout(event, -1);
 }
 
@@ -839,7 +790,7 @@ SDL_WaitEventTimeout(SDL_Event * event, int timeout)
         need_polling = (wakeup_window == NULL);
     }
 
-    if (!need_polling && _this && _this->WaitNextEventTimeout && _this->SendWakeupEvent) {
+    if (!need_polling && _this && _this->WaitEventTimeout && _this->SendWakeupEvent) {
         return SDL_WaitEventTimeout_Device(_this, wakeup_window, event, timeout);
     }
 

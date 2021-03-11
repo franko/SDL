@@ -1448,33 +1448,8 @@ X11_SendWakeupEvent(_THIS, SDL_Window *window)
     X11_XFlush(req_display);
 }
 
-void
-X11_WaitNextEvent(_THIS)
-{
-    SDL_VideoData *videodata = (SDL_VideoData *) _this->driverdata;
-    Display *display;
-    XEvent xevent;
-
-    if (!videodata) {
-        return;
-    }
-    display = videodata->display;
-
-    SDL_zero(xevent);
-    X11_XNextEvent(display, &xevent);
-
-    /* Keep processing pending events */
-    X11_DispatchEvent(_this, &xevent);
-
-#ifdef SDL_USE_IME
-    if(SDL_GetEventState(SDL_TEXTINPUT) == SDL_ENABLE){
-        SDL_IME_PumpEvents();
-    }
-#endif
-}
-
 int
-X11_WaitNextEventTimeout(_THIS, int timeout)
+X11_WaitEventTimeout(_THIS, int timeout)
 {
     SDL_VideoData *videodata = (SDL_VideoData *) _this->driverdata;
     Display *display;
