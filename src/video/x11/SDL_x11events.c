@@ -644,11 +644,10 @@ X11_HandleClipboardEvent(_THIS, const XEvent *xevent)
 
 
 static void
-X11_DispatchEvent(_THIS, XEvent *xevent_ptr)
+X11_DispatchEvent(_THIS, XEvent *xevent)
 {
     SDL_VideoData *videodata = (SDL_VideoData *) _this->driverdata;
     Display *display;
-    XEvent xevent = *xevent_ptr;
     SDL_WindowData *data;
     int orig_event_type;
     KeyCode orig_keycode;
@@ -661,18 +660,18 @@ X11_DispatchEvent(_THIS, XEvent *xevent_ptr)
     /* Save the original keycode for dead keys, which are filtered out by
        the XFilterEvent() call below.
     */
-    orig_event_type = xevent.type;
+    orig_event_type = xevent->type;
     if (orig_event_type == KeyPress || orig_event_type == KeyRelease) {
-        orig_keycode = xevent.xkey.keycode;
+        orig_keycode = xevent->xkey.keycode;
     } else {
         orig_keycode = 0;
     }
 
     /* filter events catchs XIM events and sends them to the correct handler */
-    if (X11_XFilterEvent(&xevent, None) == True) {
+    if (X11_XFilterEvent(xevent, None) == True) {
 #if 0
         printf("Filtered event type = %d display = %d window = %d\n",
-               xevent.type, xevent.xany.display, xevent.xany.window);
+               xevent->type, xevent->xany.display, xevent->xany.window);
 #endif
         /* Make sure dead key press/release events are sent */
         /* But only if we're using one of the DBus IMEs, otherwise
@@ -681,7 +680,7 @@ X11_DispatchEvent(_THIS, XEvent *xevent_ptr)
 #if defined(HAVE_IBUS_IBUS_H) || defined(HAVE_FCITX_FRONTEND_H)
             SDL_Scancode scancode = videodata->key_layout[orig_keycode];
             videodata->filter_code = orig_keycode;
-            videodata->filter_time = xevent.xkey.time;
+            videodata->filter_time = xevent->xkey.time;
 
             if (orig_event_type == KeyPress) {
                 SDL_SendKeyboardKey(SDL_PRESSED, scancode);
@@ -694,8 +693,8 @@ X11_DispatchEvent(_THIS, XEvent *xevent_ptr)
     }
 
 #if SDL_VIDEO_DRIVER_X11_SUPPORTS_GENERIC_EVENTS
-    if(xevent.type == GenericEvent) {
-        X11_HandleGenericEvent(videodata, &xevent);
+    if(xevent->type == GenericEvent) {
+        X11_HandleGenericEvent(videodata, xevent);
         return;
     }
 #endif
@@ -706,18 +705,18 @@ X11_DispatchEvent(_THIS, XEvent *xevent_ptr)
 
         SDL_VERSION(&wmmsg.version);
         wmmsg.subsystem = SDL_SYSWM_X11;
-        wmmsg.msg.x11.event = xevent;
+        wmmsg.msg.x11.event = *xevent;
         SDL_SendSysWMEvent(&wmmsg);
     }
 
 #if 0
     printf("type = %d display = %d window = %d\n",
-           xevent.type, xevent.xany.display, xevent.xany.window);
+           xevent->type, xevent->xany.display, xevent->xany.window);
 #endif
 
     if ((videodata->clipboard_window != None) &&
-        (videodata->clipboard_window == xevent.xany.window)) {
-        X11_HandleClipboardEvent(_this, &xevent);
+        (videodata->clipboard_window == xevent->xany.window)) {
+        X11_HandleClipboardEvent(_this, xevent);
         return;
     }
 
@@ -725,7 +724,7 @@ X11_DispatchEvent(_THIS, XEvent *xevent_ptr)
     if (videodata && videodata->windowlist) {
         for (i = 0; i < videodata->numwindows; ++i) {
             if ((videodata->windowlist[i] != NULL) &&
-                (videodata->windowlist[i]->xwindow == xevent.xany.window)) {
+                (videodata->windowlist[i]->xwindow == xevent->xany.window)) {
                 data = videodata->windowlist[i];
                 break;
             }
@@ -733,19 +732,19 @@ X11_DispatchEvent(_THIS, XEvent *xevent_ptr)
     }
     if (!data) {
         /* The window for KeymapNotify, etc events is 0 */
-        if (xevent.type == KeymapNotify) {
+        if (xevent->type == KeymapNotify) {
             if (SDL_GetKeyboardFocus() != NULL) {
                 X11_ReconcileKeyboardState(_this);
             }
-        } else if (xevent.type == MappingNotify) {
+        } else if (xevent->type == MappingNotify) {
             /* Has the keyboard layout changed? */
-            const int request = xevent.xmapping.request;
+            const int request = xevent->xmapping.request;
 
 #ifdef DEBUG_XEVENTS
             printf("window %p: MappingNotify!\n", data);
 #endif
             if ((request == MappingKeyboard) || (request == MappingModifier)) {
-                X11_XRefreshKeyboardMapping(&xevent.xmapping);
+                X11_XRefreshKeyboardMapping(&xevent->xmapping);
             }
 
             X11_UpdateKeymap(_this);
@@ -754,28 +753,28 @@ X11_DispatchEvent(_THIS, XEvent *xevent_ptr)
         return;
     }
 
-    switch (xevent.type) {
+    switch (xevent->type) {
 
         /* Gaining mouse coverage? */
     case EnterNotify:{
             SDL_Mouse *mouse = SDL_GetMouse();
 #ifdef DEBUG_XEVENTS
             printf("window %p: EnterNotify! (%d,%d,%d)\n", data,
-                   xevent.xcrossing.x,
-                   xevent.xcrossing.y,
-                   xevent.xcrossing.mode);
-            if (xevent.xcrossing.mode == NotifyGrab)
+                   xevent->xcrossing.x,
+                   xevent->xcrossing.y,
+                   xevent->xcrossing.mode);
+            if (xevent->xcrossing.mode == NotifyGrab)
                 printf("Mode: NotifyGrab\n");
-            if (xevent.xcrossing.mode == NotifyUngrab)
+            if (xevent->xcrossing.mode == NotifyUngrab)
                 printf("Mode: NotifyUngrab\n");
 #endif
             SDL_SetMouseFocus(data->window);
 
-            mouse->last_x = xevent.xcrossing.x;
-            mouse->last_y = xevent.xcrossing.y;
+            mouse->last_x = xevent->xcrossing.x;
+            mouse->last_y = xevent->xcrossing.y;
 
             if (!mouse->relative_mode) {
-                SDL_SendMouseMotion(data->window, 0, 0, xevent.xcrossing.x, xevent.xcrossing.y);
+                SDL_SendMouseMotion(data->window, 0, 0, xevent->xcrossing.x, xevent->xcrossing.y);
             }
         }
         break;
@@ -783,21 +782,21 @@ X11_DispatchEvent(_THIS, XEvent *xevent_ptr)
     case LeaveNotify:{
 #ifdef DEBUG_XEVENTS
             printf("window %p: LeaveNotify! (%d,%d,%d)\n", data,
-                   xevent.xcrossing.x,
-                   xevent.xcrossing.y,
-                   xevent.xcrossing.mode);
-            if (xevent.xcrossing.mode == NotifyGrab)
+                   xevent->xcrossing.x,
+                   xevent->xcrossing.y,
+                   xevent->xcrossing.mode);
+            if (xevent->xcrossing.mode == NotifyGrab)
                 printf("Mode: NotifyGrab\n");
-            if (xevent.xcrossing.mode == NotifyUngrab)
+            if (xevent->xcrossing.mode == NotifyUngrab)
                 printf("Mode: NotifyUngrab\n");
 #endif
             if (!SDL_GetMouse()->relative_mode) {
-                SDL_SendMouseMotion(data->window, 0, 0, xevent.xcrossing.x, xevent.xcrossing.y);
+                SDL_SendMouseMotion(data->window, 0, 0, xevent->xcrossing.x, xevent->xcrossing.y);
             }
 
-            if (xevent.xcrossing.mode != NotifyGrab &&
-                xevent.xcrossing.mode != NotifyUngrab &&
-                xevent.xcrossing.detail != NotifyInferior) {
+            if (xevent->xcrossing.mode != NotifyGrab &&
+                xevent->xcrossing.mode != NotifyUngrab &&
+                xevent->xcrossing.detail != NotifyInferior) {
                 SDL_SetMouseFocus(NULL);
             }
         }
@@ -805,7 +804,7 @@ X11_DispatchEvent(_THIS, XEvent *xevent_ptr)
 
         /* Gaining input focus? */
     case FocusIn:{
-            if (xevent.xfocus.mode == NotifyGrab || xevent.xfocus.mode == NotifyUngrab) {
+            if (xevent->xfocus.mode == NotifyGrab || xevent->xfocus.mode == NotifyUngrab) {
                 /* Someone is handling a global hotkey, ignore it */
 #ifdef DEBUG_XEVENTS
                 printf("window %p: FocusIn (NotifyGrab/NotifyUngrab, ignoring)\n", data);
@@ -813,7 +812,7 @@ X11_DispatchEvent(_THIS, XEvent *xevent_ptr)
                 break;
             }
 
-            if (xevent.xfocus.detail == NotifyInferior) {
+            if (xevent->xfocus.detail == NotifyInferior) {
 #ifdef DEBUG_XEVENTS
                 printf("window %p: FocusIn (NotifierInferior, ignoring)\n", data);
 #endif
@@ -839,14 +838,14 @@ X11_DispatchEvent(_THIS, XEvent *xevent_ptr)
 
         /* Losing input focus? */
     case FocusOut:{
-            if (xevent.xfocus.mode == NotifyGrab || xevent.xfocus.mode == NotifyUngrab) {
+            if (xevent->xfocus.mode == NotifyGrab || xevent->xfocus.mode == NotifyUngrab) {
                 /* Someone is handling a global hotkey, ignore it */
 #ifdef DEBUG_XEVENTS
                 printf("window %p: FocusOut (NotifyGrab/NotifyUngrab, ignoring)\n", data);
 #endif
                 break;
             }
-            if (xevent.xfocus.detail == NotifyInferior) {
+            if (xevent->xfocus.detail == NotifyInferior) {
                 /* We still have focus if a child gets focus */
 #ifdef DEBUG_XEVENTS
                 printf("window %p: FocusOut (NotifierInferior, ignoring)\n", data);
@@ -872,20 +871,20 @@ X11_DispatchEvent(_THIS, XEvent *xevent_ptr)
 
         /* Key press? */
     case KeyPress:{
-            KeyCode keycode = xevent.xkey.keycode;
+            KeyCode keycode = xevent->xkey.keycode;
             KeySym keysym = NoSymbol;
             char text[SDL_TEXTINPUTEVENT_TEXT_SIZE];
             Status status = 0;
             SDL_bool handled_by_ime = SDL_FALSE;
 
 #ifdef DEBUG_XEVENTS
-            printf("window %p: KeyPress (X11 keycode = 0x%X)\n", data, xevent.xkey.keycode);
+            printf("window %p: KeyPress (X11 keycode = 0x%X)\n", data, xevent->xkey.keycode);
 #endif
 #if 1
             if (videodata->key_layout[keycode] == SDL_SCANCODE_UNKNOWN && keycode) {
                 int min_keycode, max_keycode;
                 X11_XDisplayKeycodes(display, &min_keycode, &max_keycode);
-                keysym = X11_KeyCodeToSym(_this, keycode, xevent.xkey.state >> 13);
+                keysym = X11_KeyCodeToSym(_this, keycode, xevent->xkey.state >> 13);
                 fprintf(stderr,
                         "The key you just pressed is not recognized by SDL. To help get this fixed, please report this to the SDL forums/mailing list <https://discourse.libsdl.org/> X11 KeyCode %d (%d), X11 KeySym 0x%lX (%s).\n",
                         keycode, keycode - min_keycode, keysym,
@@ -896,13 +895,13 @@ X11_DispatchEvent(_THIS, XEvent *xevent_ptr)
             SDL_zeroa(text);
 #ifdef X_HAVE_UTF8_STRING
             if (data->ic) {
-                X11_Xutf8LookupString(data->ic, &xevent.xkey, text, sizeof(text),
+                X11_Xutf8LookupString(data->ic, &xevent->xkey, text, sizeof(text),
                                   &keysym, &status);
             } else {
-                X11_XLookupString(&xevent.xkey, text, sizeof(text), &keysym, NULL);
+                X11_XLookupString(&xevent->xkey, text, sizeof(text), &keysym, NULL);
             }
 #else
-            X11_XLookupString(&xevent.xkey, text, sizeof(text), &keysym, NULL);
+            X11_XLookupString(&xevent->xkey, text, sizeof(text), &keysym, NULL);
 #endif
 
 #ifdef SDL_USE_IME
@@ -912,7 +911,7 @@ X11_DispatchEvent(_THIS, XEvent *xevent_ptr)
 #endif
             if (!handled_by_ime) {
                 /* Don't send the key if it looks like a duplicate of a filtered key sent by an IME */
-                if (xevent.xkey.keycode != videodata->filter_code || xevent.xkey.time != videodata->filter_time) {
+                if (xevent->xkey.keycode != videodata->filter_code || xevent->xkey.time != videodata->filter_time) {
                     SDL_SendKeyboardKey(SDL_PRESSED, videodata->key_layout[keycode]);
                 }
                 if(*text) {
@@ -920,18 +919,18 @@ X11_DispatchEvent(_THIS, XEvent *xevent_ptr)
                 }
             }
 
-            X11_UpdateUserTime(data, xevent.xkey.time);
+            X11_UpdateUserTime(data, xevent->xkey.time);
         }
         break;
 
         /* Key release? */
     case KeyRelease:{
-            KeyCode keycode = xevent.xkey.keycode;
+            KeyCode keycode = xevent->xkey.keycode;
 
 #ifdef DEBUG_XEVENTS
-            printf("window %p: KeyRelease (X11 keycode = 0x%X)\n", data, xevent.xkey.keycode);
+            printf("window %p: KeyRelease (X11 keycode = 0x%X)\n", data, xevent->xkey.keycode);
 #endif
-            if (X11_KeyRepeat(display, &xevent)) {
+            if (X11_KeyRepeat(display, xevent)) {
                 /* We're about to get a repeated key down, ignore the key up */
                 break;
             }
@@ -961,27 +960,27 @@ X11_DispatchEvent(_THIS, XEvent *xevent_ptr)
     case ConfigureNotify:{
 #ifdef DEBUG_XEVENTS
             printf("window %p: ConfigureNotify! (position: %d,%d, size: %dx%d)\n", data,
-                   xevent.xconfigure.x, xevent.xconfigure.y,
-                   xevent.xconfigure.width, xevent.xconfigure.height);
+                   xevent->xconfigure.x, xevent->xconfigure.y,
+                   xevent->xconfigure.width, xevent->xconfigure.height);
 #endif
             /* Real configure notify events are relative to the parent, synthetic events are absolute. */
-            if (!xevent.xconfigure.send_event) {
+            if (!xevent->xconfigure.send_event) {
                 unsigned int NumChildren;
                 Window ChildReturn, Root, Parent;
                 Window * Children;
                 /* Translate these coodinates back to relative to root */
-                X11_XQueryTree(data->videodata->display, xevent.xconfigure.window, &Root, &Parent, &Children, &NumChildren);
-                X11_XTranslateCoordinates(xevent.xconfigure.display,
-                                        Parent, DefaultRootWindow(xevent.xconfigure.display),
-                                        xevent.xconfigure.x, xevent.xconfigure.y,
-                                        &xevent.xconfigure.x, &xevent.xconfigure.y,
+                X11_XQueryTree(data->videodata->display, xevent->xconfigure.window, &Root, &Parent, &Children, &NumChildren);
+                X11_XTranslateCoordinates(xevent->xconfigure.display,
+                                        Parent, DefaultRootWindow(xevent->xconfigure.display),
+                                        xevent->xconfigure.x, xevent->xconfigure.y,
+                                        &xevent->xconfigure.x, &xevent->xconfigure.y,
                                         &ChildReturn);
             }
                 
-            if (xevent.xconfigure.x != data->last_xconfigure.x ||
-                xevent.xconfigure.y != data->last_xconfigure.y) {
+            if (xevent->xconfigure.x != data->last_xconfigure.x ||
+                xevent->xconfigure.y != data->last_xconfigure.y) {
                 SDL_SendWindowEvent(data->window, SDL_WINDOWEVENT_MOVED,
-                                    xevent.xconfigure.x, xevent.xconfigure.y);
+                                    xevent->xconfigure.x, xevent->xconfigure.y);
 #ifdef SDL_USE_IME
                 if(SDL_GetEventState(SDL_TEXTINPUT) == SDL_ENABLE){
                     /* Update IME candidate list position */
@@ -989,13 +988,13 @@ X11_DispatchEvent(_THIS, XEvent *xevent_ptr)
                 }
 #endif
             }
-            if (xevent.xconfigure.width != data->last_xconfigure.width ||
-                xevent.xconfigure.height != data->last_xconfigure.height) {
+            if (xevent->xconfigure.width != data->last_xconfigure.width ||
+                xevent->xconfigure.height != data->last_xconfigure.height) {
                 SDL_SendWindowEvent(data->window, SDL_WINDOWEVENT_RESIZED,
-                                    xevent.xconfigure.width,
-                                    xevent.xconfigure.height);
+                                    xevent->xconfigure.width,
+                                    xevent->xconfigure.height);
             }
-            data->last_xconfigure = xevent.xconfigure;
+            data->last_xconfigure = xevent->xconfigure;
         }
         break;
 
@@ -1004,11 +1003,11 @@ X11_DispatchEvent(_THIS, XEvent *xevent_ptr)
 
             static int xdnd_version=0;
 
-            if (xevent.xclient.message_type == videodata->XdndEnter) {
+            if (xevent->xclient.message_type == videodata->XdndEnter) {
 
-                SDL_bool use_list = xevent.xclient.data.l[1] & 1;
-                data->xdnd_source = xevent.xclient.data.l[0];
-                xdnd_version = (xevent.xclient.data.l[1] >> 24);
+                SDL_bool use_list = xevent->xclient.data.l[1] & 1;
+                data->xdnd_source = xevent->xclient.data.l[0];
+                xdnd_version = (xevent->xclient.data.l[1] >> 24);
 #ifdef DEBUG_XEVENTS
                 printf("XID of source window : %ld\n", data->xdnd_source);
                 printf("Protocol version to use : %d\n", xdnd_version);
@@ -1024,15 +1023,15 @@ X11_DispatchEvent(_THIS, XEvent *xevent_ptr)
                     X11_XFree(p.data);
                 } else {
                     /* pick from list of three */
-                    data->xdnd_req = X11_PickTargetFromAtoms(display, xevent.xclient.data.l[2], xevent.xclient.data.l[3], xevent.xclient.data.l[4]);
+                    data->xdnd_req = X11_PickTargetFromAtoms(display, xevent->xclient.data.l[2], xevent->xclient.data.l[3], xevent->xclient.data.l[4]);
                 }
             }
-            else if (xevent.xclient.message_type == videodata->XdndPosition) {
+            else if (xevent->xclient.message_type == videodata->XdndPosition) {
 
 #ifdef DEBUG_XEVENTS
                 Atom act= videodata->XdndActionCopy;
                 if(xdnd_version >= 2) {
-                    act = xevent.xclient.data.l[4];
+                    act = xevent->xclient.data.l[4];
                 }
                 printf("Action requested by user is : %s\n", X11_XGetAtomName(display , act));
 #endif
@@ -1041,8 +1040,8 @@ X11_DispatchEvent(_THIS, XEvent *xevent_ptr)
                 /* reply with status */
                 memset(&m, 0, sizeof(XClientMessageEvent));
                 m.type = ClientMessage;
-                m.display = xevent.xclient.display;
-                m.window = xevent.xclient.data.l[0];
+                m.display = xevent->xclient.display;
+                m.window = xevent->xclient.data.l[0];
                 m.message_type = videodata->XdndStatus;
                 m.format=32;
                 m.data.l[0] = data->xwindow;
@@ -1051,47 +1050,47 @@ X11_DispatchEvent(_THIS, XEvent *xevent_ptr)
                 m.data.l[3] = 0;
                 m.data.l[4] = videodata->XdndActionCopy; /* we only accept copying anyway */
 
-                X11_XSendEvent(display, xevent.xclient.data.l[0], False, NoEventMask, (XEvent*)&m);
+                X11_XSendEvent(display, xevent->xclient.data.l[0], False, NoEventMask, (XEvent*)&m);
                 X11_XFlush(display);
             }
-            else if(xevent.xclient.message_type == videodata->XdndDrop) {
+            else if(xevent->xclient.message_type == videodata->XdndDrop) {
                 if (data->xdnd_req == None) {
                     /* say again - not interested! */
                     memset(&m, 0, sizeof(XClientMessageEvent));
                     m.type = ClientMessage;
-                    m.display = xevent.xclient.display;
-                    m.window = xevent.xclient.data.l[0];
+                    m.display = xevent->xclient.display;
+                    m.window = xevent->xclient.data.l[0];
                     m.message_type = videodata->XdndFinished;
                     m.format=32;
                     m.data.l[0] = data->xwindow;
                     m.data.l[1] = 0;
                     m.data.l[2] = None; /* fail! */
-                    X11_XSendEvent(display, xevent.xclient.data.l[0], False, NoEventMask, (XEvent*)&m);
+                    X11_XSendEvent(display, xevent->xclient.data.l[0], False, NoEventMask, (XEvent*)&m);
                 } else {
                     /* convert */
                     if(xdnd_version >= 1) {
-                        X11_XConvertSelection(display, videodata->XdndSelection, data->xdnd_req, videodata->PRIMARY, data->xwindow, xevent.xclient.data.l[2]);
+                        X11_XConvertSelection(display, videodata->XdndSelection, data->xdnd_req, videodata->PRIMARY, data->xwindow, xevent->xclient.data.l[2]);
                     } else {
                         X11_XConvertSelection(display, videodata->XdndSelection, data->xdnd_req, videodata->PRIMARY, data->xwindow, CurrentTime);
                     }
                 }
             }
-            else if ((xevent.xclient.message_type == videodata->WM_PROTOCOLS) &&
-                (xevent.xclient.format == 32) &&
-                (xevent.xclient.data.l[0] == videodata->_NET_WM_PING)) {
+            else if ((xevent->xclient.message_type == videodata->WM_PROTOCOLS) &&
+                (xevent->xclient.format == 32) &&
+                (xevent->xclient.data.l[0] == videodata->_NET_WM_PING)) {
                 Window root = DefaultRootWindow(display);
 
 #ifdef DEBUG_XEVENTS
                 printf("window %p: _NET_WM_PING\n", data);
 #endif
-                xevent.xclient.window = root;
-                X11_XSendEvent(display, root, False, SubstructureRedirectMask | SubstructureNotifyMask, &xevent);
+                xevent->xclient.window = root;
+                X11_XSendEvent(display, root, False, SubstructureRedirectMask | SubstructureNotifyMask, xevent);
                 break;
             }
 
-            else if ((xevent.xclient.message_type == videodata->WM_PROTOCOLS) &&
-                (xevent.xclient.format == 32) &&
-                (xevent.xclient.data.l[0] == videodata->WM_DELETE_WINDOW)) {
+            else if ((xevent->xclient.message_type == videodata->WM_PROTOCOLS) &&
+                (xevent->xclient.format == 32) &&
+                (xevent->xclient.data.l[0] == videodata->WM_DELETE_WINDOW)) {
 
 #ifdef DEBUG_XEVENTS
                 printf("window %p: WM_DELETE_WINDOW\n", data);
@@ -1099,9 +1098,9 @@ X11_DispatchEvent(_THIS, XEvent *xevent_ptr)
                 SDL_SendWindowEvent(data->window, SDL_WINDOWEVENT_CLOSE, 0, 0);
                 break;
             }
-            else if ((xevent.xclient.message_type == videodata->WM_PROTOCOLS) &&
-                (xevent.xclient.format == 32) &&
-                (xevent.xclient.data.l[0] == videodata->WM_TAKE_FOCUS)) {
+            else if ((xevent->xclient.message_type == videodata->WM_PROTOCOLS) &&
+                (xevent->xclient.format == 32) &&
+                (xevent->xclient.data.l[0] == videodata->WM_TAKE_FOCUS)) {
 
 #ifdef DEBUG_XEVENTS
                 printf("window %p: WM_TAKE_FOCUS\n", data);
@@ -1115,7 +1114,7 @@ X11_DispatchEvent(_THIS, XEvent *xevent_ptr)
         /* Do we need to refresh ourselves? */
     case Expose:{
 #ifdef DEBUG_XEVENTS
-            printf("window %p: Expose (count = %d)\n", data, xevent.xexpose.count);
+            printf("window %p: Expose (count = %d)\n", data, xevent->xexpose.count);
 #endif
             SDL_SendWindowEvent(data->window, SDL_WINDOWEVENT_EXPOSED, 0, 0);
         }
@@ -1125,10 +1124,10 @@ X11_DispatchEvent(_THIS, XEvent *xevent_ptr)
             SDL_Mouse *mouse = SDL_GetMouse();
             if(!mouse->relative_mode || mouse->relative_mode_warp) {
 #ifdef DEBUG_MOTION
-                printf("window %p: X11 motion: %d,%d\n", data, xevent.xmotion.x, xevent.xmotion.y);
+                printf("window %p: X11 motion: %d,%d\n", data, xevent->xmotion.x, xevent->xmotion.y);
 #endif
 
-                SDL_SendMouseMotion(data->window, 0, 0, xevent.xmotion.x, xevent.xmotion.y);
+                SDL_SendMouseMotion(data->window, 0, 0, xevent->xmotion.x, xevent->xmotion.y);
             }
         }
         break;
@@ -1136,15 +1135,15 @@ X11_DispatchEvent(_THIS, XEvent *xevent_ptr)
     case ButtonPress:{
             int xticks = 0, yticks = 0;
 #ifdef DEBUG_XEVENTS
-            printf("window %p: ButtonPress (X11 button = %d)\n", data, xevent.xbutton.button);
+            printf("window %p: ButtonPress (X11 button = %d)\n", data, xevent->xbutton.button);
 #endif
-            if (X11_IsWheelEvent(display,&xevent,&xticks, &yticks)) {
+            if (X11_IsWheelEvent(display,xevent,&xticks, &yticks)) {
                 SDL_SendMouseWheel(data->window, 0, (float) xticks, (float) yticks, SDL_MOUSEWHEEL_NORMAL);
             } else {
                 SDL_bool ignore_click = SDL_FALSE;
-                int button = xevent.xbutton.button;
+                int button = xevent->xbutton.button;
                 if(button == Button1) {
-                    if (ProcessHitTest(_this, data, &xevent)) {
+                    if (ProcessHitTest(_this, data, xevent)) {
                         SDL_SendWindowEvent(data->window, SDL_WINDOWEVENT_HIT_TEST, 0, 0);
                         break;  /* don't pass this event on to app. */
                     }
@@ -1165,18 +1164,18 @@ X11_DispatchEvent(_THIS, XEvent *xevent_ptr)
                     SDL_SendMouseButton(data->window, 0, SDL_PRESSED, button);
                 }
             }
-            X11_UpdateUserTime(data, xevent.xbutton.time);
+            X11_UpdateUserTime(data, xevent->xbutton.time);
         }
         break;
 
     case ButtonRelease:{
-            int button = xevent.xbutton.button;
+            int button = xevent->xbutton.button;
             /* The X server sends a Release event for each Press for wheels. Ignore them. */
             int xticks = 0, yticks = 0;
 #ifdef DEBUG_XEVENTS
-            printf("window %p: ButtonRelease (X11 button = %d)\n", data, xevent.xbutton.button);
+            printf("window %p: ButtonRelease (X11 button = %d)\n", data, xevent->xbutton.button);
 #endif
-            if (!X11_IsWheelEvent(display, &xevent, &xticks, &yticks)) {
+            if (!X11_IsWheelEvent(display, xevent, &xticks, &yticks)) {
                 if (button > 7) {
                     /* see explanation at case ButtonPress */
                     button -= (8-SDL_BUTTON_X1);
@@ -1193,13 +1192,13 @@ X11_DispatchEvent(_THIS, XEvent *xevent_ptr)
             Atom real_type;
             unsigned long items_read, items_left;
 
-            char *name = X11_XGetAtomName(display, xevent.xproperty.atom);
+            char *name = X11_XGetAtomName(display, xevent->xproperty.atom);
             if (name) {
-                printf("window %p: PropertyNotify: %s %s time=%lu\n", data, name, (xevent.xproperty.state == PropertyDelete) ? "deleted" : "changed", xevent.xproperty.time);
+                printf("window %p: PropertyNotify: %s %s time=%lu\n", data, name, (xevent->xproperty.state == PropertyDelete) ? "deleted" : "changed", xevent->xproperty.time);
                 X11_XFree(name);
             }
 
-            status = X11_XGetWindowProperty(display, data->xwindow, xevent.xproperty.atom, 0L, 8192L, False, AnyPropertyType, &real_type, &real_format, &items_read, &items_left, &propdata);
+            status = X11_XGetWindowProperty(display, data->xwindow, xevent->xproperty.atom, 0L, 8192L, False, AnyPropertyType, &real_type, &real_format, &items_read, &items_left, &propdata);
             if (status == Success && items_read > 0) {
                 if (real_type == XA_INTEGER) {
                     int *values = (int *)propdata;
@@ -1271,16 +1270,16 @@ X11_DispatchEvent(_THIS, XEvent *xevent_ptr)
                 set _NET_WM_USER_TIME here, though. That's only for legit
                 user interaction with the window. */
             if (!data->user_time) {
-                data->user_time = xevent.xproperty.time;
+                data->user_time = xevent->xproperty.time;
             }
 
-            if (xevent.xproperty.atom == data->videodata->_NET_WM_STATE) {
+            if (xevent->xproperty.atom == data->videodata->_NET_WM_STATE) {
                 /* Get the new state from the window manager.
                    Compositing window managers can alter visibility of windows
                    without ever mapping / unmapping them, so we handle that here,
                    because they use the NETWM protocol to notify us of changes.
                  */
-                const Uint32 flags = X11_GetNetWMState(_this, xevent.xproperty.window);
+                const Uint32 flags = X11_GetNetWMState(_this, xevent->xproperty.window);
                 const Uint32 changed = flags ^ data->window->flags;
 
                 if ((changed & SDL_WINDOW_HIDDEN) || (changed & SDL_WINDOW_FULLSCREEN)) {
@@ -1298,7 +1297,7 @@ X11_DispatchEvent(_THIS, XEvent *xevent_ptr)
                         SDL_SendWindowEvent(data->window, SDL_WINDOWEVENT_RESTORED, 0, 0);
                     }
                 }
-            } else if (xevent.xproperty.atom == videodata->XKLAVIER_STATE) {
+            } else if (xevent->xproperty.atom == videodata->XKLAVIER_STATE) {
                 /* Hack for Ubuntu 12.04 (etc) that doesn't send MappingNotify
                    events when the keyboard layout changes (for example,
                    changing from English to French on the menubar's keyboard
@@ -1307,7 +1306,7 @@ X11_DispatchEvent(_THIS, XEvent *xevent_ptr)
                    right approach, but it seems to work. */
                 X11_UpdateKeymap(_this);
                 SDL_SendKeymapChangedEvent();
-            } else if (xevent.xproperty.atom == videodata->_NET_FRAME_EXTENTS) {
+            } else if (xevent->xproperty.atom == videodata->_NET_FRAME_EXTENTS) {
                 Atom type;
                 int format;
                 unsigned long nitems, bytes_after;
@@ -1330,10 +1329,10 @@ X11_DispatchEvent(_THIS, XEvent *xevent_ptr)
         break;
 
     case SelectionNotify: {
-            Atom target = xevent.xselection.target;
+            Atom target = xevent->xselection.target;
 #ifdef DEBUG_XEVENTS
             printf("window %p: SelectionNotify (requestor = %ld, target = %ld)\n", data,
-                xevent.xselection.requestor, xevent.xselection.target);
+                xevent->xselection.requestor, xevent->xselection.target);
 #endif
             if (target == data->xdnd_req) {
                 /* read data */
@@ -1378,7 +1377,7 @@ X11_DispatchEvent(_THIS, XEvent *xevent_ptr)
 
     default:{
 #ifdef DEBUG_XEVENTS
-            printf("window %p: Unhandled event %d\n", data, xevent.type);
+            printf("window %p: Unhandled event %d\n", data, xevent->type);
 #endif
         }
         break;
