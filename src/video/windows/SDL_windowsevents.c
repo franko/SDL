@@ -1133,8 +1133,7 @@ WIN_WaitEventTimeout(_THIS, int timeout)
         BOOL message_result;
         UINT_PTR timer_id = 0;
         if (timeout > 0) {
-            // FIXME: warning about 2nd argument of SetTimer
-            timer_id = SetTimer(NULL, NULL, timeout, NULL);
+            timer_id = SetTimer(NULL, 0, timeout, NULL);
             message_result = GetMessage(&msg, 0, 0, 0);
             KillTimer(NULL, timer_id);
         } else if (timeout == 0) {

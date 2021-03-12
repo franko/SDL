@@ -485,7 +485,7 @@ Cocoa_WaitEventTimeout(_THIS, int timeout)
 { @autoreleasepool
 {
     if (timeout > 0) {
-        NSDate *limitDate = [NSDate dateWithTimeIntervalSinceNow: double(timeout) / 1000.0];
+        NSDate *limitDate = [NSDate dateWithTimeIntervalSinceNow: (double) timeout / 1000.0];
         return Cocoa_PumpEventsUntilDate(_this, limitDate, false);
     } else if (timeout == 0) {
         return Cocoa_PumpEventsUntilDate(_this, [NSDate distantPast], false);

@@ -1466,7 +1466,6 @@ X11_WaitEventTimeout(_THIS, int timeout)
     SDL_zero(xevent);
 
     if (timeout == 0) {
-        // FIXME: do we need to loop while there are pending events ?
         if (X11_Pending(display)) {
             X11_XNextEvent(display, &xevent);
         } else {
