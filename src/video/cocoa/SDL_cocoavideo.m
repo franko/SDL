@@ -45,6 +45,9 @@ Cocoa_Available(void)
 static void
 Cocoa_DeleteDevice(SDL_VideoDevice * device)
 {
+    if (device->wakeup_lock) {
+        SDL_DestroyMutex(device->wakeup_lock);
+    }
     SDL_free(device->driverdata);
     SDL_free(device);
 }
@@ -70,6 +73,7 @@ Cocoa_CreateDevice(int devindex)
         return NULL;
     }
     device->driverdata = data;
+    device->wakeup_lock = SDL_CreateMutex();
 
     /* Set the function pointers */
     device->VideoInit = Cocoa_VideoInit;
@@ -80,6 +84,8 @@ Cocoa_CreateDevice(int devindex)
     device->GetDisplayModes = Cocoa_GetDisplayModes;
     device->SetDisplayMode = Cocoa_SetDisplayMode;
     device->PumpEvents = Cocoa_PumpEvents;
+    device->WaitEventTimeout = Cocoa_WaitEventTimeout;
+    device->SendWakeupEvent = Cocoa_SendWakeupEvent;
     device->SuspendScreenSaver = Cocoa_SuspendScreenSaver;
 
     device->CreateSDLWindow = Cocoa_CreateWindow;
